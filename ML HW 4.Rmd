@@ -1,0 +1,103 @@
+---
+title: "Machine Learning HW 4"
+output: html_document
+---
+## Summary of Project
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data Set
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Building the Model
+Reproduceability
+As with all reproducible result, set the seed, in my case set to 4172017. 
+
+The model was built:
+The 'classe' variable of the dataset contained in the last column, there are 5 factor variables witht eh following defintiion:
+
+classe A = Exactly according to the specification
+classe B = Throwing the elbows to the front
+classe C = Lifting the dumbbell only halfway
+classe D = Lowering the dumbbell only halfway
+classe E = Throwing the hips to the front (Class E)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("caret")
+#install.packages("randomForest")
+#install.packages("rpart")
+library(randomForest)
+library(caret)
+library(rpart)
+library(rpart.plot)
+```
+
+## load data
+Load and cleanse the data
+
+```{r read data}
+trainset <- read.csv(".\\data\\pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+testset <- read.csv(".\\data\\pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+
+## remove unnecessary columns for the model
+trainset   <-trainset[,-c(1:7)]
+testset <-testset[,-c(1:7)]
+
+## Remove all missing values
+trainset<-trainset[,colSums(is.na(trainset)) == 0]
+testset <-testset [,colSums(is.na(testset)) == 0]
+
+## use 80% to train model and 20% for testing model from the train set
+set.seed(4172017)
+inTrain <- createDataPartition(y=trainset$classe, p=0.8, list=FALSE)
+
+Training <- trainset[inTrain, ]; 
+Testing  <- trainset[-inTrain, ]
+
+dim(Training); 
+dim(Testing)
+
+
+## Plot Classe Levels
+plot(Training$classe, col="yellow", main="Plot of classe A-E in the trainset", xlab="classe levels", ylab="Count")
+
+```
+
+## Try Classification Tree first
+
+```{r ClassTree, echo=FALSE}
+# Plot and Predict using Classification Tree
+ClassModel <- rpart(classe ~ ., data=Training, method="class")
+rpart.plot(ClassModel, main="Classification Tree")
+
+# Prediction and confusion matrix
+ClassPrediction <- predict(ClassModel, Testing, type = "class")
+confusionMatrix(ClassPrediction, Testing$classe)
+```
+
+
+## Try Random Forest second
+```{r RandomTree, echo=FALSE}
+# Plot and Predict using Random Forest
+RFModel <- randomForest(classe ~. , data=Training, method="class")
+
+# Prediction and confusion matrix
+RFPrediction <- predict(RFModel, Testing, type = "class")
+confusionMatrix(RFPrediction, Testing$classe)
+
+```
+## Conclusion 
+
+The Random Forest provided a better accuracy than the Classification Tree.
+Now apply the RF model to the actual test set
+
+##Using Random Forest on the Test set
+```{r Final, echo=FALSE}
+# Prediction results
+RFResult <- predict(RFModel, testset, type = "class")
+print(RFResult)
+```
+
